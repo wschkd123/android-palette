@@ -17,9 +17,6 @@ import android.view.View;
 import java.util.ArrayList;
 import java.util.List;
 
-/**
- * Created by wensefu on 17-3-21.
- */
 public class PaletteView extends View {
 
     private Paint mPaint;
@@ -31,8 +28,8 @@ public class PaletteView extends View {
 
     private static final int MAX_CACHE_STEP = 20;
 
-    private List<DrawingInfo> mDrawingList;
-    private List<DrawingInfo> mRemovedList;
+    private List<DrawingInfo> mDrawingList; //每一步的绘制信息
+    private List<DrawingInfo> mRemovedList; //每一步撤销的绘制信息
 
     private Xfermode mXferModeClear;
     private Xfermode mXferModeDraw;
@@ -128,10 +125,21 @@ public class PaletteView extends View {
         }
     }
 
+    /**
+     * 橡皮擦大小
+     * @param size
+     */
     public void setEraserSize(int size) {
         mEraserSize = size;
+        if (mMode == Mode.ERASER) {
+            mPaint.setStrokeWidth(mEraserSize);
+        }
     }
 
+    /**
+     * 画笔大小
+     * @param size
+     */
     public void setPenRawSize(int size) {
         mDrawSize = size;
         if(mMode == Mode.DRAW){
@@ -139,10 +147,17 @@ public class PaletteView extends View {
         }
     }
 
+    /**
+     * 画笔颜色
+     * @param color
+     */
     public void setPenColor(int color) {
         mPaint.setColor(color);
     }
 
+    /**
+     * 重绘每一步的轨迹
+     */
     private void reDraw(){
         if (mDrawingList != null) {
             mBufferBitmap.eraseColor(Color.TRANSPARENT);
@@ -184,6 +199,11 @@ public class PaletteView extends View {
         return mDrawingList != null && mDrawingList.size() > 0;
     }
 
+    /**
+     * 撤销
+     * <p>
+     * 把最后一步删除，然后重绘
+     */
     public void redo() {
         int size = mRemovedList == null ? 0 : mRemovedList.size();
         if (size > 0) {
@@ -197,6 +217,11 @@ public class PaletteView extends View {
         }
     }
 
+    /**
+     * 反撤销
+     * <p>
+     * 撤销列表里面删除最后一步，然后重绘
+     */
     public void undo() {
         int size = mDrawingList == null ? 0 : mDrawingList.size();
         if (size > 0) {
@@ -232,6 +257,10 @@ public class PaletteView extends View {
         }
     }
 
+    /**
+     * 获取绘制的位图
+     * @return
+     */
     public Bitmap buildBitmap() {
         Bitmap bm = getDrawingCache();
         Bitmap result = Bitmap.createBitmap(bm);
@@ -239,12 +268,15 @@ public class PaletteView extends View {
         return result;
     }
 
+    /**
+     * 每一步绘制完成，记录每一步的轨迹和画笔属性
+     */
     private void saveDrawingPath(){
         if (mDrawingList == null) {
             mDrawingList = new ArrayList<>(MAX_CACHE_STEP);
-        } else if (mDrawingList.size() == MAX_CACHE_STEP) {
+        } /*else if (mDrawingList.size() == MAX_CACHE_STEP) {
             mDrawingList.remove(0);
-        }
+        }*/
         Path cachePath = new Path(mPath);
         Paint cachePaint = new Paint(mPaint);
         PathDrawingInfo info = new PathDrawingInfo();
