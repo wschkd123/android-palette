@@ -9,6 +9,7 @@ import android.graphics.Path;
 import android.graphics.PorterDuff;
 import android.graphics.PorterDuffXfermode;
 import android.graphics.Xfermode;
+import android.support.annotation.NonNull;
 import android.support.annotation.Nullable;
 import android.util.AttributeSet;
 import android.view.MotionEvent;
@@ -17,6 +18,19 @@ import android.view.View;
 import java.util.ArrayList;
 import java.util.List;
 
+/**
+ * 画板
+ * <p>
+ * 支持撤销（undo）
+ * <p>
+ * 支持反撤销（redo）
+ * <p>
+ * 支持橡皮擦（eraser）
+ * <p>
+ * 支持清除功能（clear）
+ * <p>
+ * 支持保存为图像（save）
+ */
 public class PaletteView extends View {
 
     private Paint mPaint;
@@ -68,7 +82,7 @@ public class PaletteView extends View {
         void onUndoRedoStatusChanged();
     }
 
-    public void setCallback(Callback callback){
+    public void setCallback(Callback callback) {
         mCallback = callback;
     }
 
@@ -79,8 +93,8 @@ public class PaletteView extends View {
         mPaint.setFilterBitmap(true);
         mPaint.setStrokeJoin(Paint.Join.ROUND);
         mPaint.setStrokeCap(Paint.Cap.ROUND);
-        mDrawSize = DimenUtils.dp2pxInt(3);
-        mEraserSize = DimenUtils.dp2pxInt(30);
+        mDrawSize = dp2px(getContext(), 3);
+        mEraserSize = dp2px(getContext(), 30);
         mPaint.setStrokeWidth(mDrawSize);
         mPaint.setColor(0XFF000000);
         mXferModeDraw = new PorterDuffXfermode(PorterDuff.Mode.SRC);
@@ -88,17 +102,18 @@ public class PaletteView extends View {
         mPaint.setXfermode(mXferModeDraw);
     }
 
-    private void initBuffer(){
+    private void initBuffer() {
         mBufferBitmap = Bitmap.createBitmap(getWidth(), getHeight(), Bitmap.Config.ARGB_8888);
         mBufferCanvas = new Canvas(mBufferBitmap);
     }
 
     private abstract static class DrawingInfo {
         Paint paint;
+
         abstract void draw(Canvas canvas);
     }
 
-    private static class PathDrawingInfo extends DrawingInfo{
+    private static class PathDrawingInfo extends DrawingInfo {
 
         Path path;
 
@@ -127,6 +142,7 @@ public class PaletteView extends View {
 
     /**
      * 橡皮擦大小
+     *
      * @param size
      */
     public void setEraserSize(int size) {
@@ -138,17 +154,19 @@ public class PaletteView extends View {
 
     /**
      * 画笔大小
+     *
      * @param size
      */
     public void setPenRawSize(int size) {
         mDrawSize = size;
-        if(mMode == Mode.DRAW){
+        if (mMode == Mode.DRAW) {
             mPaint.setStrokeWidth(mDrawSize);
         }
     }
 
     /**
      * 画笔颜色
+     *
      * @param color
      */
     public void setPenColor(int color) {
@@ -158,7 +176,7 @@ public class PaletteView extends View {
     /**
      * 重绘每一步的轨迹
      */
-    private void reDraw(){
+    private void reDraw() {
         if (mDrawingList != null) {
             mBufferBitmap.eraseColor(Color.TRANSPARENT);
             for (DrawingInfo drawingInfo : mDrawingList) {
@@ -168,26 +186,26 @@ public class PaletteView extends View {
         }
     }
 
-    public int getPenColor(){
+    public int getPenColor() {
         return mPaint.getColor();
     }
 
-    public int getPenSize(){
+    public int getPenSize() {
         return mDrawSize;
     }
 
-    public int getEraserSize(){
+    public int getEraserSize() {
         return mEraserSize;
     }
 
-    public void setPenAlpha(int alpha){
+    public void setPenAlpha(int alpha) {
         mPenAlpha = alpha;
-        if(mMode == Mode.DRAW){
+        if (mMode == Mode.DRAW) {
             mPaint.setAlpha(alpha);
         }
     }
 
-    public int getPenAlpha(){
+    public int getPenAlpha() {
         return mPenAlpha;
     }
 
@@ -195,7 +213,7 @@ public class PaletteView extends View {
         return mRemovedList != null && mRemovedList.size() > 0;
     }
 
-    public boolean canUndo(){
+    public boolean canUndo() {
         return mDrawingList != null && mDrawingList.size() > 0;
     }
 
@@ -259,6 +277,7 @@ public class PaletteView extends View {
 
     /**
      * 获取绘制的位图
+     *
      * @return
      */
     public Bitmap buildBitmap() {
@@ -271,7 +290,7 @@ public class PaletteView extends View {
     /**
      * 每一步绘制完成，记录每一步的轨迹和画笔属性
      */
-    private void saveDrawingPath(){
+    private void saveDrawingPath() {
         if (mDrawingList == null) {
             mDrawingList = new ArrayList<>(MAX_CACHE_STEP);
         } /*else if (mDrawingList.size() == MAX_CACHE_STEP) {
@@ -300,7 +319,7 @@ public class PaletteView extends View {
     @SuppressWarnings("all")
     @Override
     public boolean onTouchEvent(MotionEvent event) {
-        if(!isEnabled()){
+        if (!isEnabled()) {
             return false;
         }
         final int action = event.getAction() & MotionEvent.ACTION_MASK;
@@ -313,7 +332,7 @@ public class PaletteView extends View {
                 if (mPath == null) {
                     mPath = new Path();
                 }
-                mPath.moveTo(x,y);
+                mPath.moveTo(x, y);
                 break;
             case MotionEvent.ACTION_MOVE:
                 //这里终点设为两点的中心点的目的在于使绘制的曲线更平滑，如果终点直接设置为x,y，效果和lineto是一样的,实际是折线效果
@@ -324,7 +343,7 @@ public class PaletteView extends View {
                 if (mMode == Mode.ERASER && !mCanEraser) {
                     break;
                 }
-                mBufferCanvas.drawPath(mPath,mPaint);
+                mBufferCanvas.drawPath(mPath, mPaint);
                 invalidate();
                 mLastX = x;
                 mLastY = y;
@@ -337,5 +356,9 @@ public class PaletteView extends View {
                 break;
         }
         return true;
+    }
+
+    private static int dp2px(@NonNull Context context, int dp) {
+        return (int) (context.getResources().getDisplayMetrics().density * dp + .5f);
     }
 }
